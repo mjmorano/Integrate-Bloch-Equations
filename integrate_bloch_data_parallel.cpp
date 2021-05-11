@@ -5,6 +5,7 @@
 #include <chrono>
 #include <vector>
 #include <boost/numeric/odeint.hpp>
+#include <mpi.h>
 
 using namespace std;
 using namespace boost::numeric::odeint;
@@ -34,7 +35,7 @@ void helium( const state_type &y , state_type &dydt , double t )
     dydt[2] = -gamma_He * y[3] * y[1];
 }
 
-int main(int argc, char **argv)
+int main(int argc, char *argv[])
 {
     vector<double> t;
     double u;
@@ -83,9 +84,13 @@ int main(int argc, char **argv)
 
     auto start = high_resolution_clock::now();
 
-    for(int j=0; j<num_particles; j++){
+    MPI::Init(argc,argv);
+    int num_procs = MPI::COMM_WORLD.Get_size();
+    int rank = MPI::COMM_WORLD.Get_rank();
 
-        outfile.open("Neutron_Data/Neutron_"+to_string(j)+"_data.txt");
+    for(int j=0; j<num_particles; j++){
+        cout << "Hello from process " << rank << " of " << num_procs << endl;
+        outfile.open("Neutron_Data/Neutron_"+to_string(rank)+to_string(j)+"_data.txt");
         state_type x = { 0 , 0 , 1.0 , 0 , 0}; // initial conditions
 
         for(size_t i=0; i<num_steps; i++){
@@ -99,22 +104,23 @@ int main(int argc, char **argv)
         outfile.close();
     }
 
-    for(int j=0; j<num_particles; j++){
+    // for(int j=0; j<num_particles; j++){
 
-        outfile.open("Helium_Data/Helium_"+to_string(j)+"_data.txt");
-        state_type y = { 0 , 0 , 1.0 , 0 , 0}; // initial conditions
+    //     outfile.open("Helium_Data/Helium_"+to_string(j)+"_data.txt");
+    //     state_type y = { 0 , 0 , 1.0 , 0 , 0}; // initial conditions
 
-        for(size_t i=0; i<num_steps; i++){
+    //     for(size_t i=0; i<num_steps; i++){
 
-            y[3] = B1[i][j];
-            y[4] = B0[i][j];
-            stepper.do_step( helium, y , t[i] , dt);
-            u = u_mag(y[0],y[1],y[2]);
-            outfile << t[i] << "\t" << y[0] << "\t" << y[1] << "\t" << y[2] << "\t" << y[3] << "\t" << u << "\n";
-        }
-        outfile.close();
-    }
+    //         y[3] = B1[i][j];
+    //         y[4] = B0[i][j];
+    //         stepper.do_step( helium, y , t[i] , dt);
+    //         u = u_mag(y[0],y[1],y[2]);
+    //         outfile << t[i] << "\t" << y[0] << "\t" << y[1] << "\t" << y[2] << "\t" << y[3] << "\t" << u << "\n";
+    //     }
+    //     outfile.close();
+    // }
 
+    MPI::Finalize();
 
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
